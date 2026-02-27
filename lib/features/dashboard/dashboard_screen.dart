@@ -3,6 +3,9 @@ import '../../core/models/expense_model.dart';
 import '../../core/services/expense_repository.dart';
 import '../../core/ai_engine/financial_analyzer.dart';
 import '../expenses/add_expense_screen.dart';
+import '../../core/ai_engine/insight_engine.dart';
+import '../../core/models/goal_model.dart';
+import '../../core/ai_engine/goal_analyzer.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -38,6 +41,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   Widget build(BuildContext context) {
     final analyzer = FinancialAnalyzer(_expenses);
+    final goal = FinancialGoal(
+  targetAmount: 50000,
+  targetDate: DateTime.now().add(const Duration(days: 180)),
+);
+
+final goalAnalyzer = GoalAnalyzer(
+  goal: goal,
+  analyzer: analyzer,
+);
+    final insights = InsightEngine(_expenses).generateInsights();
     final healthColor = _healthColor(analyzer.healthScore);
 
     return Scaffold(
@@ -143,6 +156,72 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ),
 
             const SizedBox(height: 20),
+const SizedBox(height: 20),
+
+// ===== INSIGHTS SECTION =====
+Container(
+  padding: const EdgeInsets.all(16),
+  margin: const EdgeInsets.all(12),
+  decoration: BoxDecoration(
+    color: Colors.purple.shade50,
+    borderRadius: BorderRadius.circular(12),
+  ),
+  child: Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      const Text(
+        "Smart Insights",
+        style: TextStyle(fontWeight: FontWeight.bold),
+      ),
+      const SizedBox(height: 10),
+      ...insights.map(
+        (insight) => Padding(
+          padding: const EdgeInsets.symmetric(vertical: 4),
+          child: Text("• $insight"),
+        ),
+      ),
+    ],
+  ),
+),
+
+const SizedBox(height: 20),
+
+Container(
+  padding: const EdgeInsets.all(16),
+  margin: const EdgeInsets.all(12),
+  decoration: BoxDecoration(
+    color: Colors.teal.shade50,
+    borderRadius: BorderRadius.circular(12),
+  ),
+  child: Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      const Text(
+        "Savings Goal",
+        style: TextStyle(fontWeight: FontWeight.bold),
+      ),
+      const SizedBox(height: 10),
+      Text("Target: ₹${goal.targetAmount.toStringAsFixed(0)}"),
+      Text("Months Remaining: ${goal.monthsRemaining}"),
+      Text(
+          "Required Monthly Saving: ₹${goalAnalyzer.requiredMonthlySaving.toStringAsFixed(2)}"),
+      Text(
+          "Available Monthly Saving (Predicted): ₹${goalAnalyzer.availableMonthlySaving.toStringAsFixed(2)}"),
+      const SizedBox(height: 8),
+      Text(
+        "Goal Status: ${goalAnalyzer.status}",
+        style: TextStyle(
+          fontWeight: FontWeight.bold,
+          color: goalAnalyzer.status == "On Track"
+              ? Colors.green
+              : goalAnalyzer.status == "Tight"
+                  ? Colors.orange
+                  : Colors.red,
+        ),
+      ),
+    ],
+  ),
+),
 
             // ===== EXPENSE LIST =====
             ListView.builder(
