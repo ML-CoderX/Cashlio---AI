@@ -78,7 +78,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
               ),
               const SizedBox(height: 16),
               DropdownButtonFormField(
-                value: _selectedCategory,
+                initialValue: _selectedCategory,
                 items: _categories
                     .map((category) => DropdownMenuItem(
                           value: category,
@@ -96,7 +96,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
               ),
               const SizedBox(height: 16),
               DropdownButtonFormField(
-                value: _selectedType,
+                initialValue: _selectedType,
                 items: const [
                   DropdownMenuItem(
                     value: "expense",
