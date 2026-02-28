@@ -3,6 +3,7 @@ import '../../core/models/expense_model.dart';
 import '../../core/models/goal_model.dart';
 import '../../core/services/expense_repository.dart';
 import '../../core/services/goal_repository.dart';
+import '../../core/services/export_service.dart';
 import '../../core/ai_engine/financial_analyzer.dart';
 import '../../core/ai_engine/insight_engine.dart';
 import '../../core/ai_engine/goal_analyzer.dart';
@@ -19,6 +20,7 @@ class DashboardScreen extends StatefulWidget {
 class _DashboardScreenState extends State<DashboardScreen> {
   final ExpenseRepository _repository = ExpenseRepository();
   final GoalRepository _goalRepository = GoalRepository();
+  final ExportService _exportService = ExportService();
 
   List<Expense> _expenses = [];
   FinancialGoal? _goal;
@@ -72,7 +74,30 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
 
     return Scaffold(
-      appBar: AppBar(title: const Text("Cashlio")),
+      appBar: AppBar(
+        title: const Text("Cashlio"),
+        actions: [
+          PopupMenuButton<String>(
+            onSelected: (value) {
+              if (value == "csv") {
+                _exportService.exportToCSV(_expenses);
+              } else if (value == "pdf") {
+                _exportService.exportToPDF(_expenses, _goal);
+              }
+            },
+            itemBuilder: (context) => const [
+              PopupMenuItem(
+                value: "csv",
+                child: Text("Export CSV"),
+              ),
+              PopupMenuItem(
+                value: "pdf",
+                child: Text("Export PDF Report"),
+              ),
+            ],
+          ),
+        ],
+      ),
       body: SingleChildScrollView(
         child: Column(
           children: [
@@ -91,9 +116,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   Text("Income: ₹${analyzer.totalIncome.toStringAsFixed(2)}"),
                   Text("Expenses: ₹${analyzer.totalExpenses.toStringAsFixed(2)}"),
                   Text("Net Savings: ₹${analyzer.netSavings.toStringAsFixed(2)}"),
-                  Text(
-                    "Savings Rate: ${analyzer.savingsRate.toStringAsFixed(1)}%",
-                  ),
+                  Text("Savings Rate: ${analyzer.savingsRate.toStringAsFixed(1)}%"),
                 ],
               ),
             ),
@@ -156,10 +179,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     ),
 
                   const SizedBox(height: 10),
-                  Text(
-                      "Predicted Income: ₹${analyzer.predictedIncome.toStringAsFixed(2)}"),
-                  Text(
-                      "Predicted Expense: ₹${analyzer.predictedExpense.toStringAsFixed(2)}"),
+                  Text("Predicted Income: ₹${analyzer.predictedIncome.toStringAsFixed(2)}"),
+                  Text("Predicted Expense: ₹${analyzer.predictedExpense.toStringAsFixed(2)}"),
                   Text(
                     "Predicted Savings: ₹${analyzer.predictedSavings.toStringAsFixed(2)}",
                     style: TextStyle(
@@ -232,8 +253,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       style: TextStyle(fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 10),
-                    Text(
-                        "Target: ₹${_goal!.targetAmount.toStringAsFixed(0)}"),
+                    Text("Target: ₹${_goal!.targetAmount.toStringAsFixed(0)}"),
                     Text("Months Remaining: ${_goal!.monthsRemaining}"),
                     Text(
                         "Required Monthly: ₹${goalAnalyzer.requiredMonthlySaving.toStringAsFixed(2)}"),
@@ -244,8 +264,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       "Status: ${goalAnalyzer.status}",
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
-                        color:
-                            _goalStatusColor(goalAnalyzer.status),
+                        color: _goalStatusColor(goalAnalyzer.status),
                       ),
                     ),
                   ],
@@ -266,8 +285,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       horizontal: 12, vertical: 6),
                   child: ListTile(
                     title: Text(expense.title),
-                    subtitle:
-                        Text("${expense.category} • ${expense.type}"),
+                    subtitle: Text("${expense.category} • ${expense.type}"),
                     trailing: Text(
                       "₹${expense.amount.toStringAsFixed(2)}",
                       style: TextStyle(
