@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import '../../core/models/expense_model.dart';
-import '../../core/services/expense_repository.dart';
-import '../../core/ai_engine/financial_analyzer.dart';
-import '../expenses/add_expense_screen.dart';
-import '../../core/ai_engine/insight_engine.dart';
 import '../../core/models/goal_model.dart';
+import '../../core/services/expense_repository.dart';
+import '../../core/services/goal_repository.dart';
+import '../../core/ai_engine/financial_analyzer.dart';
+import '../../core/ai_engine/insight_engine.dart';
 import '../../core/ai_engine/goal_analyzer.dart';
+import '../expenses/add_expense_screen.dart';
+import '../goals/add_goal_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -16,18 +18,29 @@ class DashboardScreen extends StatefulWidget {
 
 class _DashboardScreenState extends State<DashboardScreen> {
   final ExpenseRepository _repository = ExpenseRepository();
+  final GoalRepository _goalRepository = GoalRepository();
+
   List<Expense> _expenses = [];
+  FinancialGoal? _goal;
 
   @override
   void initState() {
     super.initState();
     _loadExpenses();
+    _loadGoal();
   }
 
   Future<void> _loadExpenses() async {
     final data = await _repository.getAllExpenses();
     setState(() {
       _expenses = data;
+    });
+  }
+
+  Future<void> _loadGoal() async {
+    final goal = await _goalRepository.getGoal();
+    setState(() {
+      _goal = goal;
     });
   }
 
@@ -38,20 +51,25 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return Colors.red;
   }
 
+  Color _goalStatusColor(String status) {
+    if (status == "On Track") return Colors.green;
+    if (status == "Tight") return Colors.orange;
+    return Colors.red;
+  }
+
   @override
   Widget build(BuildContext context) {
     final analyzer = FinancialAnalyzer(_expenses);
-    final goal = FinancialGoal(
-  targetAmount: 50000,
-  targetDate: DateTime.now().add(const Duration(days: 180)),
-);
-
-final goalAnalyzer = GoalAnalyzer(
-  goal: goal,
-  analyzer: analyzer,
-);
     final insights = InsightEngine(_expenses).generateInsights();
     final healthColor = _healthColor(analyzer.healthScore);
+
+    GoalAnalyzer? goalAnalyzer;
+    if (_goal != null) {
+      goalAnalyzer = GoalAnalyzer(
+        goal: _goal!,
+        analyzer: analyzer,
+      );
+    }
 
     return Scaffold(
       appBar: AppBar(title: const Text("Cashlio")),
@@ -59,7 +77,7 @@ final goalAnalyzer = GoalAnalyzer(
         child: Column(
           children: [
 
-            // ===== SUMMARY CARD =====
+            // ===== SUMMARY =====
             Container(
               padding: const EdgeInsets.all(16),
               margin: const EdgeInsets.all(12),
@@ -74,7 +92,8 @@ final goalAnalyzer = GoalAnalyzer(
                   Text("Expenses: ₹${analyzer.totalExpenses.toStringAsFixed(2)}"),
                   Text("Net Savings: ₹${analyzer.netSavings.toStringAsFixed(2)}"),
                   Text(
-                      "Savings Rate: ${analyzer.savingsRate.toStringAsFixed(1)}%"),
+                    "Savings Rate: ${analyzer.savingsRate.toStringAsFixed(1)}%",
+                  ),
                 ],
               ),
             ),
@@ -106,7 +125,7 @@ final goalAnalyzer = GoalAnalyzer(
 
             const SizedBox(height: 20),
 
-            // ===== PREDICTION PANEL =====
+            // ===== PREDICTION =====
             Container(
               padding: const EdgeInsets.all(16),
               margin: const EdgeInsets.all(12),
@@ -118,7 +137,7 @@ final goalAnalyzer = GoalAnalyzer(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text(
-                    "Next Month Forecast (Moving Average)",
+                    "Next Month Forecast",
                     style: TextStyle(fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 10),
@@ -131,13 +150,12 @@ final goalAnalyzer = GoalAnalyzer(
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: const Text(
-                        "⚠ Prediction may be inaccurate. Add at least 3 months of data for reliable forecasting.",
+                        "⚠ Add at least 3 months of data for reliable forecasting.",
                         style: TextStyle(color: Colors.orange),
                       ),
                     ),
 
                   const SizedBox(height: 10),
-
                   Text(
                       "Predicted Income: ₹${analyzer.predictedIncome.toStringAsFixed(2)}"),
                   Text(
@@ -156,72 +174,85 @@ final goalAnalyzer = GoalAnalyzer(
             ),
 
             const SizedBox(height: 20),
-const SizedBox(height: 20),
 
-// ===== INSIGHTS SECTION =====
-Container(
-  padding: const EdgeInsets.all(16),
-  margin: const EdgeInsets.all(12),
-  decoration: BoxDecoration(
-    color: Colors.purple.shade50,
-    borderRadius: BorderRadius.circular(12),
-  ),
-  child: Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      const Text(
-        "Smart Insights",
-        style: TextStyle(fontWeight: FontWeight.bold),
-      ),
-      const SizedBox(height: 10),
-      ...insights.map(
-        (insight) => Padding(
-          padding: const EdgeInsets.symmetric(vertical: 4),
-          child: Text("• $insight"),
-        ),
-      ),
-    ],
-  ),
-),
+            // ===== SMART INSIGHTS =====
+            Container(
+              padding: const EdgeInsets.all(16),
+              margin: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.purple.shade50,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    "Smart Insights",
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 10),
+                  ...insights.map(
+                    (insight) => Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 4),
+                      child: Text("• $insight"),
+                    ),
+                  ),
+                ],
+              ),
+            ),
 
-const SizedBox(height: 20),
+            const SizedBox(height: 20),
 
-Container(
-  padding: const EdgeInsets.all(16),
-  margin: const EdgeInsets.all(12),
-  decoration: BoxDecoration(
-    color: Colors.teal.shade50,
-    borderRadius: BorderRadius.circular(12),
-  ),
-  child: Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      const Text(
-        "Savings Goal",
-        style: TextStyle(fontWeight: FontWeight.bold),
-      ),
-      const SizedBox(height: 10),
-      Text("Target: ₹${goal.targetAmount.toStringAsFixed(0)}"),
-      Text("Months Remaining: ${goal.monthsRemaining}"),
-      Text(
-          "Required Monthly Saving: ₹${goalAnalyzer.requiredMonthlySaving.toStringAsFixed(2)}"),
-      Text(
-          "Available Monthly Saving (Predicted): ₹${goalAnalyzer.availableMonthlySaving.toStringAsFixed(2)}"),
-      const SizedBox(height: 8),
-      Text(
-        "Goal Status: ${goalAnalyzer.status}",
-        style: TextStyle(
-          fontWeight: FontWeight.bold,
-          color: goalAnalyzer.status == "On Track"
-              ? Colors.green
-              : goalAnalyzer.status == "Tight"
-                  ? Colors.orange
-                  : Colors.red,
-        ),
-      ),
-    ],
-  ),
-),
+            // ===== GOAL SECTION =====
+            if (_goal == null)
+              ElevatedButton(
+                onPressed: () async {
+                  final result = await Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (_) => const AddGoalScreen()),
+                  );
+                  if (result == true) _loadGoal();
+                },
+                child: const Text("Create Savings Goal"),
+              )
+            else if (goalAnalyzer != null)
+              Container(
+                padding: const EdgeInsets.all(16),
+                margin: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.teal.shade50,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      "Savings Goal",
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                        "Target: ₹${_goal!.targetAmount.toStringAsFixed(0)}"),
+                    Text("Months Remaining: ${_goal!.monthsRemaining}"),
+                    Text(
+                        "Required Monthly: ₹${goalAnalyzer.requiredMonthlySaving.toStringAsFixed(2)}"),
+                    Text(
+                        "Available Monthly: ₹${goalAnalyzer.availableMonthlySaving.toStringAsFixed(2)}"),
+                    const SizedBox(height: 8),
+                    Text(
+                      "Status: ${goalAnalyzer.status}",
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color:
+                            _goalStatusColor(goalAnalyzer.status),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+            const SizedBox(height: 20),
 
             // ===== EXPENSE LIST =====
             ListView.builder(
@@ -230,10 +261,9 @@ Container(
               itemCount: _expenses.length,
               itemBuilder: (context, index) {
                 final expense = _expenses[index];
-
                 return Card(
-                  margin:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  margin: const EdgeInsets.symmetric(
+                      horizontal: 12, vertical: 6),
                   child: ListTile(
                     title: Text(expense.title),
                     subtitle:
@@ -260,13 +290,9 @@ Container(
           final result = await Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (_) => const AddExpenseScreen(),
-            ),
+                builder: (_) => const AddExpenseScreen()),
           );
-
-          if (result == true) {
-            _loadExpenses();
-          }
+          if (result == true) _loadExpenses();
         },
         child: const Icon(Icons.add),
       ),

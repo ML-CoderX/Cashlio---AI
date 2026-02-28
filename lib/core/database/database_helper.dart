@@ -36,5 +36,12 @@ class DatabaseHelper {
         type TEXT NOT NULL
       )
     ''');
+    await db.execute('''
+  CREATE TABLE goals (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    targetAmount REAL NOT NULL,
+    targetDate TEXT NOT NULL
+  )
+''');
   }
 }
